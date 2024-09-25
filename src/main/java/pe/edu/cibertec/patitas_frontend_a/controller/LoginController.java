@@ -8,19 +8,21 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 import pe.edu.cibertec.patitas_frontend_a.dto.LoginRequestDTO;
 import pe.edu.cibertec.patitas_frontend_a.dto.LoginResponseDTO;
 import pe.edu.cibertec.patitas_frontend_a.viewmodel.LoginModel;
+
 
 @Controller
 @RequestMapping("/login")
 public class LoginController {
 
     @Autowired
-    private RestTemplate restTemplate;
+    RestTemplate restTemplate;
 
-    private static final String apiUrl = "http://localhost:8081/autenticacion/login";
+    //private static final String apiUrl = "http://localhost:8081/autenticacion/login";
 
     @GetMapping("/inicio")
     public String inicio(Model model) {
@@ -45,36 +47,57 @@ public class LoginController {
             return "inicio";
         }
 
-        LoginRequestDTO loginRequestDTO = new LoginRequestDTO(tipoDocumento, numeroDocumento, password);
-
         try {
+            // Invocar servicio de autenticacion
+            String endpoint = "ttp://localhost:8081/autenticacion/login";
+            LoginRequestDTO loginRequestDTO = new LoginRequestDTO(tipoDocumento, numeroDocumento, password);
+            LoginResponseDTO loginResponseDTO = restTemplate.postForObject(endpoint, loginRequestDTO, LoginResponseDTO.class);
 
-            ResponseEntity<LoginResponseDTO> response = restTemplate.postForEntity(apiUrl, loginRequestDTO, LoginResponseDTO.class);
+            if (loginResponseDTO.codigo().equals("00")) {
 
-            LoginResponseDTO loginResponseDTO = response.getBody();
-
-            if(loginResponseDTO != null && "00".equals(loginResponseDTO.codigo())){
-
-                // Autenticacion exitosa, redirigimos a la pagina principal
                 LoginModel loginModel = new LoginModel("00", "", loginResponseDTO.nombreUsuario());
                 model.addAttribute("loginModel", loginModel);
                 return "principal";
 
             } else {
 
-                // Autenticacion fallida, redirigimos al login nuevamente
-                LoginModel loginModel = new LoginModel("01", "Error: Credenciales incorrectas", "");
+                LoginModel loginModel = new LoginModel("02", "Error: Autenticacion fallida", "");
                 model.addAttribute("loginModel", loginModel);
                 return "inicio";
 
             }
 
+        } catch (Exception e){
+
+            LoginModel loginModel = new LoginModel("99", "Error: Ocurrió un problema en la autenticación", "");
+            model.addAttribute("loginModel", loginModel);
+            System.out.println(e.getMessage());
+            return "inicio";
+
+        }
+
+        /* MI METODO PRACTICA 2
+
+        LoginRequestDTO loginRequestDTO = new LoginRequestDTO(tipoDocumento, numeroDocumento, password);
+        try {
+            ResponseEntity<LoginResponseDTO> response = restTemplate.postForEntity(apiUrl, loginRequestDTO, LoginResponseDTO.class);
+            LoginResponseDTO loginResponseDTO = response.getBody();
+            if(loginResponseDTO != null && "00".equals(loginResponseDTO.codigo())){
+                // Autenticacion exitosa, redirigimos a la pagina principal
+                LoginModel loginModel = new LoginModel("00", "", loginResponseDTO.nombreUsuario());
+                model.addAttribute("loginModel", loginModel);
+                return "principal";
+            } else {
+                // Autenticacion fallida, redirigimos al login nuevamente
+                LoginModel loginModel = new LoginModel("01", "Error: Credenciales incorrectas", "");
+                model.addAttribute("loginModel", loginModel);
+                return "inicio";
+            }
         } catch (Exception e) {
             LoginModel loginModel = new LoginModel("404", "Error: No se pudo conectar con la autenticación", "");
             model.addAttribute("loginModel", loginModel);
             return "inicio";
+        }   */
 
-        }
     }
 }
-
